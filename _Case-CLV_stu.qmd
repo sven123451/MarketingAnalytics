@@ -1,0 +1,351 @@
+---
+title: "CLV Case Study"
+author: "Wei Miao"
+institute: UCL School of Management
+df-print: kable
+colorlinks: true
+code-line-numbers: true
+format:
+  pdf: 
+    toc: true
+    number-sections: true
+    page-layout: full
+    toc-depth: 2
+    code-line-numbers: true
+    code-copy: hover
+knitr:
+  opts_chunk:
+    echo: true
+    warning: true
+    message: true
+    error: true
+---
+
+# Compute Customer Acquisition Cost
+
+Compute the customer acquisition costs (CAC) for M&S's delivery pass program.
+
+CAC = total costs for customer ad clicks + total costs of £10 promo + total costs of free deliveries
+
+**CAC Part I: Costs of paid search ads to get 1 new member.**
+
+-   *\[...\] "about 10% of customers who click on an ad on search engine or social medias will sign up for a free trial, and 20% of those trial users will eventually become paying customers."*
+
+```{r}
+# clicker_to_trier_rate is the % of trier customers from clickers
+clicker_to_trier_rate <- 0.1
+
+# trier_to_member_rate is the % of a new member from triers
+trier_to_member_rate <- 0.2
+```
+
+-   How many customers need to click the ad to get 1 new customer?
+
+```{r}
+n_clickers_for_1newmember <- 1/trier_to_member_rate * 1/clicker_to_trier_rate
+
+n_clickers_for_1newmember
+```
+
+-   Total costs for customer clicks
+
+```{r}
+total_cost_clicks <- 20
+  
+total_cost_clicks
+```
+
+**CAC Part II: total costs of £10 promo for first order each trier customer**
+
+-   What is the total promo cost for these trier customers' first order?
+-   10 is retail price of promo, actually multiply by 0.93 (COGS) meaning it is actually 9.3 pounds cost to MS
+
+```{r}
+promo_first_order_each_trier <- 10
+profit_margin <- 0.07
+
+total_cost_promo <- promo_first_order_each_trier * # promotion amount
+    (1 - profit_margin) * # COGS rate
+    (1 / trier_to_member_rate) # num of triers
+
+total_cost_promo
+```
+
+**CAC Part III: total costs from selling groceries for each trier**
+
+-   2 visits for each trier, the profits from the 2 visits are
+
+```{r}
+
+revenue_each_visit <- 100
+
+profit_each_trier <- revenue_each_visit * profit_margin * 2
+
+profit_each_trier
+```
+
+-   The 2 visits are free of delivery charges, which are costs to M&S
+
+```{r}
+deliverycost_each_trier <- 5
+deliverycost_each_trier
+```
+
+-   Net costs for each trier from the 2 visits
+
+```{r}
+
+netcost_each_trier <- deliverycost_each_trier * 2 - profit_each_trier
+
+netcost_each_trier
+```
+
+-   Total net profits from all triers
+
+```{r}
+totalcosts_from_all_triers <- netcost_each_trier * (1/trier_to_member_rate)
+
+totalcosts_from_all_triers
+```
+
+-   CAC = total costs for customer ad clicks + total costs of £10 promo + total costs of free deliveries
+
+```{r}
+CAC <- total_cost_clicks + total_cost_promo + totalcosts_from_all_triers
+
+CAC
+```
+
+# Compute Customer Lifetime Value
+
+## Step 1: Determine time unit of analysis
+
+Find the time unit of analysis in the case study.
+
+Should we use monthly analysis?
+
+## Step 2: Determine number of years
+
+Find $N$: the number of years over which the customer relationship is assessed
+
+```{r}
+N <- 5
+```
+
+## Step 3: Compute profit margin for each period
+
+$g = M - c$**: profit each year, which is the profit from sales M minus marketing costs c**
+
+-   The annual membership fee is £89
+
+```{r}
+
+membership <- 89
+
+```
+
+-   n_visit: 40 visits each year; each time £100; with profit margin 7% (COGS 93%)
+
+```{r}
+
+n_visit <- 40
+
+```
+
+-   M: profit margin each period
+
+```{r}
+
+M <- membership + n_visit * revenue_each_visit * profit_margin
+M
+```
+
+-   *c:* variable delivery costs each order
+
+```{r}
+deliverycost_each_visit <- 5
+c <- deliverycost_each_visit * n_visit
+c
+```
+
+-   g: the period net profit from customers
+
+```{r}
+
+g <- M - c
+g_seq <- rep(g, N)
+g_seq
+
+```
+
+## Step 4: Compute sequence of retention rate
+
+$r$: retention rate
+
+```{r}
+# retention_rate is the probability of customer staying with us after 1 year
+r <- 0.7
+
+# create a geometric sequence of accumulative retention rate for N years
+r_seq <- r^(seq(0,N-1))
+#alternative
+#r_seq <-r^(1:N-1) 
+r_seq
+```
+
+### Step 5: Compute sequence of discount factors
+
+$k$: the discount rate
+
+```{r}
+k <- 0.1
+#d is the discount factor, factor we apply to cashflows to discount until today
+d <- 1/(1+k)
+d_seq <- d ^ (1:N)
+d_seq
+```
+
+### Step 6: Compute CLV
+
+Compute the CLV based on the CLV formula
+
+-   Revenues, variables costs, and profit for the next 5 years
+
+```{r}
+g_seq
+```
+
+-   Apply retention rate
+
+```{r}
+g_seq_after_churn <- g_seq * r_seq
+g_seq_after_churn
+```
+
+-   Apply discount factor
+
+```{r}
+g_seq_after_churn_discount <- g_seq_after_churn * d_seq
+
+g_seq_after_churn_discount
+```
+
+-   Compute CLV by summing up future expected profits
+
+```{r}
+sum(g_seq_after_churn_discount)
+
+sum(g_seq_after_churn_discount) - CAC
+```
+
+# Use CLV to Guide Marketing Decisions
+
+The above provides a comprehensive view of the potential profitability of M&S's delivery pass program. By calculating the CLV of customers who sign up for the delivery pass, M&S can make informed decisions about whether to launch the program and how to optimize its marketing efforts to attract and retain high-value customers.
+
+As we have seen, there are many decision variables that can impact the CLV of the delivery pass program. For example,
+
+-   The price of the delivery pass can affect the final CLV in multiple ways. A lower price may attract more customers during the marketing funnel, but it may also reduce the overall profitability of the program. On the other hand, a higher price boost short-run profitability but may deter some customers from signing up and lead to lower retention rate in the long run.
+
+-   The first-time promotion can also impact the CLV. A higher promotion amount may attract more customers during the marketing funnel, but it may also increase the CAC and reduce the overall profitability of the program.
+
+-   The retention rate is another key factor that can impact the CLV. M&S can develop personalized recommendation systems on their shopping website, which can potentially increase the basket size and the retention rate.
+
+We can use CLV to guide our marketing decisions. For example, if M&S decides to reduce the pass price to £79 per year, then the retention rate is expected to increase to 75%, and the clicker-to-trier rate will increase to 25%. Calculate the new CLV in this new scenario and compare it with the original CLV, and discuss which proposal is more profitable.
+
+# After-Class Exercise
+
+To facilitate the process, let's first see how to use **a user defined function** to compute CLV for any new scenario with ease.
+
+```{r}
+computeCLV <- function(N = 5,
+                       membership = 89,
+                       n_visit = 40,
+                       revenue_each_visit = 100,
+                       profit_margin = 0.07,
+                       r = 0.7,
+                       k = 0.1,
+                       clicker_to_trier_rate = 0.1,
+                       trier_to_member_rate = 0.2,
+                       promo_first_order_each_trier = 10,
+                       deliverycost_each_visit = 5) {
+    # Step 3
+
+    ## compute M
+    M <- membership + revenue_each_visit * n_visit * profit_margin
+
+    c <- deliverycost_each_visit * n_visit
+
+    ## compute CF = M - c
+    g <- M - c
+
+    ## compute profit sequence
+    g_seq <- rep(g, N)
+
+    # Step 4: compute sequence of retention
+    r_seq <- r^(seq(1, N) - 1)
+
+    # Step 5: compute sequence of discount factors
+    d <- 1 / (1 + k)
+
+    d_seq <- d^(seq(1, N))
+
+    # Step 6: Compute CAC
+
+    ## Part I: costs for clicking
+    n_clickers_for_1newmember <- (1 / clicker_to_trier_rate) * (1 / trier_to_member_rate)
+
+    total_cost_clicks <- 0.4 * n_clickers_for_1newmember
+
+    ## Part II: free £10 goods
+    total_cost_promo <- promo_first_order_each_trier * # promotion amount
+        (1 - profit_margin) * # profit rate
+        (1 / trier_to_member_rate) # num of triers
+
+    ## Part III: delivery costs
+    profit_each_trier <- revenue_each_visit * profit_margin * 2
+
+    deliverycost_each_trier <- deliverycost_each_visit * 2
+
+    netcost_each_trier <- deliverycost_each_trier - profit_each_trier
+
+    totalcosts_from_all_triers <- netcost_each_trier * (1 / trier_to_member_rate)
+
+    ## Compute CAC
+    CAC <- total_cost_clicks + total_cost_promo + totalcosts_from_all_triers
+
+
+    # Step 7: Compute CLV
+
+    ## apply churn rate to profit sequence
+    g_seq_after_churn <- g_seq * r_seq
+
+    ## apply discount factor to profit sequence
+    g_seq_after_churn_discount <- g_seq_after_churn * d_seq
+
+    ## take sum and deduct the CAC
+    CLV <- sum(g_seq_after_churn_discount) - CAC
+
+    return(CLV)
+}
+```
+
+```{r}
+computeCLV()
+computeCLV(membership = 79, r = 0.75)
+```
+
+## Use CLV to Guide Marketing Decisions
+
+-   (To guide customer acquisition) What if the company only offers £5 for first time purchase? This will save some CAC but the clicker-to-trier rate will decrease to 5%. Please compute the new CLV. Should you go ahead with the proposed change?
+
+```{r}
+
+
+```
+
+-   (To guide customer retention) What if the company increases the annual membership fee to \$119? This will increase revenue from memberships but will also make some customers unhappy so their retention rate reduce to 55%. Please compute the new CLV. Should you go ahead with the proposed change?
+
+```{r}
+
+
+```
